@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>INNOV LoRaWAN Field Tracker</title>
+
+    <!-- Balise meta pour la configuration de la vue -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <!-- Chargement des feuilles de style -->
+    <link rel="stylesheet" href="{{url_for('static', filename='leaflet/leaflet.css')}}"/>
+    <link rel="stylesheet" href="{{url_for('static', filename='fontawesome/css/all.css')}}" />
+    <link rel="stylesheet" href="{{url_for('static', filename='leaflet-measure/leaflet-measure.css')}}" />
+    <link rel="stylesheet" href="{{url_for('static', filename='leaflet-locatecontrol/L.Control.Locate.mapbox.min.css')}}" />
+    <link rel="stylesheet" href="{{url_for('static', filename='leaflet.bigImager/dist/Leaflet.BigImage.min.css')}}" />
+    
+    <!-- Chargement des scripts -->
+    <script src="{{url_for('static', filename='jquery-3.3.1.min.js')}}"></script>
+    <script src="{{url_for('static', filename='leaflet/leaflet.js')}}"></script>
+    <script src="{{url_for('static', filename='leaflet-edgescalebar/leaflet.edgescalebar.js')}}"></script>
+    <script src="{{url_for('static', filename='leaflet-measure/leaflet-measure.js')}}"></script>
+    <script src="{{url_for('static', filename='leaflet-locatecontrol/L.Control.Locate.min.js')}}"></script>
+    <script src="{{url_for('static', filename='leaflet-bing-layer.min.js')}}"></script>
+    <script src="{{url_for('static', filename='esri-leaflet.js')}}"></script>
+    <script src="{{url_for('static', filename='heatmap.js-2.0.5/plugins/leaflet-heatmap/leaflet-heat.js')}}"></script>
+    <script src="{{url_for('static', filename='leaflet.bigImager/dist/Leaflet.BigImage.min.js')}}"></script>
+    
+    <style>
+      .legend-container {
+          background-color: #ffffff;
+          padding: 10px;
+          border-radius: 5px;
+      }
+
+      .legend-title {
+          margin-bottom: 5px;
+          text-align: center;
+      }
+
+      .color-bar-legend {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 5px;
+      }
+
+      .color-bar {
+          width: 50px;
+          height: 15px;
+      }
+
+      .red { background-color: #FF0000; }
+      .orange { background-color: #FF7F00; }
+      .yellow { background-color: #FFFF00; }
+      .green { background-color: #00FF00; }
+      .cyan { background-color: #00FFFF; }
+      .blue { background-color: #0000FF; }
+
+      .legend-labels {
+          display: flex;
+          justify-content: space-between;
+          padding: 0 10px;
+      }
+
+      .legend-label {
+          font-size: 12px;
+      }
+  </style>
+  </head>
+  <body>
+
+    <!-- Élément de la carte -->
+    <div id="mapid" style="height: 98vh; width: 100%"></div>
+    <div class="heatmap"></div>
+
+    <!-- Script JavaScript pour configurer la carte et gérer les interactions -->
+    <script>
+
+      // Définition des différents fonds de carte
+      var osm_Link = '<a href="http://openstreetmap.org">OpenStreetMap</a>',
+          otm_Link = '<a href="http://opentopomap.org/">OpenTopoMap</a>',
+          bing_Link = '<a href="http://bing.com/">Bing</a>',
+          google_Link = '<a href="http://google.com/">Google</a>',
+          heatmap_Link = '<a href="http://osm.org/copyright">OpenStreetMap</a>';
+
+      // URL des différentes tuiles de fond de carte
+      var osm_Url = 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          osm_Attrib = '&copy; ' + osm_Link + ' Contributors',
+          otm_Url = 'http://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+          otm_Attrib = '&copy; ' + otm_Link + ' Contributors ',
+          bing_Attrib = '&copy; ' + bing_Link + ' Contributors',
+          google_Url = 'http://mt.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+          google_Attrib = '&copy; ' + google_Link + ' Contributors',
+          heatmap_url = 'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          heatmap_Attrib = '&copy; ' + heatmap_Link + ' contributors';
+
+      // Initialisation des couches de carte avec les différentes tuiles
+      var osm_Map = L.tileLayer(osm_Url, {attribution: osm_Attrib}),
+          esri_Map = L.esri.basemapLayer("Topographic"),
+          otm_Map = L.tileLayer(otm_Url, {attribution: otm_Attrib}),
+          google_Map = L.tileLayer(google_Url, {attribution: google_Attrib}),
+          heat_Map = L.tileLayer(heatmap_url, {attribution: heatmap_Attrib}),
+
+      // Ajout des couches de fond de carte à une liste
+      {%- if bing_api_key %},
+          bing_dark = L.tileLayer.bing({bingMapsKey: '{{bing_api_key}}', imagerySet: 'CanvasDark', attribution: bing_Attrib}),
+          bing_sat = L.tileLayer.bing({bingMapsKey: '{{bing_api_key}}', imagerySet: 'Aerial', attribution: bing_Attrib}),
+          bing_sat_labels = L.tileLayer.bing({bingMapsKey: '{{bing_api_key}}', imagerySet: 'AerialWithLabels', attribution: bing_Attrib})
+      {% endif -%};
+      
+      // Gestion de la sauvegarde de la position de la carte
+      function boundsChanged () {
+        localStorage.setItem('bounds', JSON.stringify(map.getBounds()));
+        default_zoom = false;
+      }
+
+      // Création de la carte avec gestion de la position sauvegardée
+      var map;
+      var default_zoom = true;
+
+      var b = JSON.parse(localStorage.getItem('bounds'));
+      if (b == null) {
+          map = L.map('mapid', { layers: [google_Map] }).setView([{{start_lat}}, {{start_lon}}], 13);
+      } else {
+          try {
+              map = L.map('mapid', { layers: [google_Map] });
+              map.fitBounds([[b._southWest.lat, b._southWest.lng], [b._northEast.lat, b._northEast.lng]]);
+              default_zoom = false;
+          } catch (err) {
+              console.error("Error fitting bounds:", err);
+              // If there's an error fitting bounds, set default view
+              map = L.map('mapid', { layers: [google_Map] }).setView([{{start_lat}}, {{start_lon}}], 13);
+          }
+      }
+
+      // map = L.map('mapid').setView([51.505, -0.09], 13);
+
+      // Gestion des événements de déplacement et de zoom de la carte
+      map.on('dragend', boundsChanged);
+      map.on('zoomend', boundsChanged);
+
+      // Désactivation de l'inertie pour une meilleure expérience utilisateur
+      map.options.inertia=false;
+
+      // Ajout des contrôles de mesure et de localisation à la carte
+      var measureControl = L.control.measure({
+        activeColor: '#FF0000',
+        completedColor: '#FF8000',
+        primaryLengthUnit: 'miles',
+        secondaryLengthUnit: 'kilometers'
+      });
+      measureControl.addTo(map);
+
+      L.control.locate().addTo(map);
+
+      L.edgeScaleBar().addTo(map);
+
+      // Définition des différentes couches de fond de carte
+      var baseLayers = {
+          "Topographic": esri_Map,
+          "OpenStreetMap": osm_Map,
+          "OpenTopoMap": otm_Map,
+          "Google": google_Map,
+          "Heatmap": heat_Map,
+        {%- if bing_api_key %}
+          "Bing (Dark)": bing_dark,
+          "Bing Satellite": bing_sat,
+          "Bing Satellite (w Labels)": bing_sat_labels
+        {% endif %}
+      };
+
+      // Ajout d'un contrôle pour basculer entre les couches de fond de carte
+      L.control.layers(baseLayers).addTo(map);
+
+      // Gestion de l'événement de clic sur la carte
+      map.on('click', function(e) {
+        console.log("Clicked: " + e.latlng.lat + ", " + e.latlng.lng);
+      });
+
+      // Ajout de marqueurs pour chaque passerelle avec un cercle autour
+      {% for each_gateway in gateway_locations %}
+      var gateway = L.marker([{{each_gateway[1]}}, {{each_gateway[2]}}, {{each_gateway[3]}}]).bindPopup('Gateway: {{each_gateway[0]}}<br />Lat/Lon: {{each_gateway[1]}}, {{each_gateway[2]}}').addTo(map);
+      var gatewayCircle = L.circle([{{each_gateway[1]}}, {{each_gateway[2]}}, {{each_gateway[3]}}], {
+          color: 'blue',
+          fillColor: 'blue',
+          fillOpacity: 0.1,
+          radius: 15000  
+      }).addTo(map);
+      {% endfor %}
+
+      // Création d'une liste de marqueurs pour chaque périphérique
+      var markers = {};
+      {% for each_device in devices %}
+      markers['{{each_device}}'] = new L.FeatureGroup();
+      map.addLayer(markers['{{each_device}}']);
+      {% endfor %}
+
+      // Contrôle pour sélectionner l'âge des marqueurs à afficher
+      var legend_age = L.control({position: 'topright'});
+      legend_age.onAdd = function(map) {
+        var div = L.DomUtil.create('div', 'info legend_age');
+        div.innerHTML = '<select>' +
+            '<option value="all">All markers</option>' +
+            '<option value="7day">Past 7 Days</option>' +
+            '<option value="1day">Past 1 Day</option>' +
+            '<option value="6hour">Past 6 Hours</option>' +
+            '<option value="1hour">Past 1 Hour</option>' +
+            '<option value="30min">Past 30 Min</option>' +
+            '</select>';
+        div.firstChild.onmousedown = div.firstChild.ondblclick = L.DomEvent.stopPropagation;
+        return div;
+      };
+      legend_age.addTo(map);
+
+      // Fonction pour basculer l'affichage des marqueurs sur la carte en fonction de la case à cocher
+      function toggleFunction(element) {
+        if (element.checked) {
+          map.addLayer(markers[element.value]);
+        } else {
+          map.removeLayer(markers[element.value]);
+        }
+      }
+
+      // Contrôle des légendes des dispositifs affichés sur la carte
+      var legend_devices = L.control({position: 'topright'});
+      legend_devices.onAdd = function(map) {
+        var div = L.DomUtil.create('div');
+        div.innerHTML = `
+        <div class="leaflet-control-layers leaflet-control-layers-expanded">
+          <form>
+            {% for each_device in devices -%}
+            <div>
+              <input class="leaflet-control-layers-overlays" id="command"
+                onclick=toggleFunction(this) type="checkbox" value="{{each_device}}" checked>{{each_device}}</input>
+            </div>
+            {%- endfor %}
+          </form>
+        </div>`;
+        return div;
+      };
+      legend_devices.addTo(map);
+
+      // Ajouter un écouteur pour contrôler les calques afin de détecter lorsque "Heatmap" est sélectionné.
+      map.on('overlayadd', function(eventLayer){
+          if (eventLayer.name === 'Heatmap') {
+              addHeatmapLayer();
+          }
+      });
+
+      // Fonction pour ajouter un calque de heatmap
+      function addHeatmapLayer() {
+          fetch('/heatmap_data') // Récupérer les données de heatmap à partir de la route Flask
+              .then(response => response.json())
+              .then(data => {
+                  var gradient = {
+                    0: '#0000FF',    // Blue for RSSI <= -110
+                 0.25: '#00FF00',    // Green for -110 < RSSI <= -105
+                  0.5: '#FFFF00',    // Yellow for -105 < RSSI <= -100
+                 0.75: '#FFFF00',    // Yellow for -100 < RSSI <= -95
+                    1: '#FF0000'     // Red for RSSI > -95
+                  };
+
+                  var heat = L.heatLayer(data, {
+                      radius: 80,
+                      minOpacity: 0.4, // Ajuster l'opacité minimale
+                      gradient: gradient // Utiliser les couleurs de gradient définies
+                  }).addTo(map); // Ajouter le calque de heatmap à la carte
+              });
+      }
+      
+      // Call addHeatmapLayer function after fetching data
+      addHeatmapLayer();
+
+        // Définir le contenu du titre de la légende
+        // var legendContent = `
+        //     <table>
+        //       <tbody>
+        //         <tr>
+        //           <th style="text-align: center" class="">Colour</th>
+        //           <th>&nbsp;</th>
+        //           <th colspan="2" style="text-align: center">Signal</th>
+        //         </tr>
+        //         <tr>
+        //           <td bgcolor="#FF0000"></td>
+        //           <td rowspan="3" style="vertical-align: top;">
+        //             <span style="writing-mode: vertical-lr;
+        //                         -ms-writing-mode: tb-rl;
+        //                         transform: rotate(180deg);">
+        //               <small>strong→</small>
+        //             </span>
+        //           </td>
+        //           <th>&nbsp;</th>
+        //           <td>&gt;&nbsp;-100&nbsp;dBm</td>
+        //         </tr>
+        //         <tr>
+        //           <td bgcolor="#FF7F00"></td>
+        //           <th>&nbsp;</th>
+        //           <td>-100&nbsp;-&nbsp;-105</td>
+        //         </tr>
+        //         <tr>
+        //           <td bgcolor="#FFFF00"></td>
+        //           <th>&nbsp;</th>
+        //           <td>-105&nbsp;-&nbsp;-110</td>
+        //         </tr>
+        //         <tr>
+        //           <td bgcolor="#00FF00"></td>
+        //           <td rowspan="3" style="vertical-align: bottom;">
+        //             <span style="writing-mode: vertical-lr;
+        //                         -ms-writing-mode: tb-rl;
+        //                         transform: rotate(180deg);" align="left" valign="bottom">
+        //               <small>←weak</small>
+        //             </span>
+        //           </td>
+        //           <th>&nbsp;</th>
+        //           <td>-110&nbsp;-&nbsp;-115</td>
+        //         </tr>
+        //         <tr>
+        //           <td bgcolor="#00FFFF"></td>
+        //           <th>&nbsp;</th>
+        //           <td>-115&nbsp;-&nbsp;-120</td>
+        //         </tr>
+        //         <tr>
+        //           <td bgcolor="#0000FF"></td>
+        //           <th>&nbsp;</th>
+        //           <td>&lt;&nbsp;-120&nbsp;dBm</td>
+        //         </tr>
+        //       </tbody>
+        //     </table>`;
+
+        var legendContent = `
+            <table>
+                <tbody>
+                    <tr>
+                        <th style="text-align: center" class="">Colour</th>
+                        <th>&nbsp;</th>
+                        <th colspan="2" style="text-align: center">Signal</th>
+                    </tr>
+                    <tr>
+                        <td bgcolor="#FF6347"></td>
+                        <td rowspan="2" style="vertical-align: top;">
+                            <span style="writing-mode: vertical-lr;
+                                        -ms-writing-mode: tb-rl;
+                                        transform: rotate(180deg);">
+                                <small>strong→</small>
+                            </span>
+                        </td>
+                        <th>&nbsp;</th>
+                        <td>&gt;&nbsp;-100&nbsp;dBm</td>
+                    </tr>
+                    <tr>
+                        <td bgcolor="#FFFF00"></td>
+                        <th>&nbsp;</th>
+                        <td>-100&nbsp;à&nbsp;-105</td>
+                    </tr>
+                    <tr>
+                        <td bgcolor="#32CD32"></td>
+                        <td rowspan="2" style="vertical-align: top;">
+                            <span style="writing-mode: vertical-lr;
+                                        -ms-writing-mode: tb-rl;
+                                        transform: rotate(180deg);">
+                                <small>←weak</small>
+                            </span>
+                        </td>
+                        <th>&nbsp;</th>
+                        <td>-105&nbsp;à&nbsp;-110</td>
+                    </tr>
+                    <tr>
+                        <td bgcolor="#0000FF"></td>
+                        <th>&nbsp;</th>
+                        <td>&lt;&nbsp;-110&nbsp;dBm</td>                        
+                    </tr>
+                </tbody>
+            </table>`;
+
+
+        // Contrôle pour la légende des appareils affichés sur la carte
+        var legend_devices = L.control({position: 'bottomleft'});
+        legend_devices.onAdd = function(map) {
+            var div = L.DomUtil.create('div', 'legend-container');
+            div.innerHTML = legendContent;
+            return div;
+        };
+        legend_devices.addTo(map);
+
+        // Fonction pour ajouter de nouveaux marqueurs sur la carte en fonction du nombre de secondes écoulées
+        // function add_new_markers(past_seconds) {
+        // var url = '/past/' + past_seconds;
+        // $.getJSON(url,
+            
+        //     function(data, textStatus, jqXHR) {
+        //         if (jqXHR.status !== 204) {
+        //             for (var i = 0; i < data.length; i++) {
+        //                 var rssi = parseInt(data[i]["rssi"]);
+        //                 var color = '#0000FF'; 
+        //                 if (rssi > -100) {
+        //                     color = '#FF0000';
+        //                 } else if (rssi > -105) { 
+        //                     color = '#FF7F00'; 
+        //                 } else if (rssi > -110) { 
+        //                     color = '#FFFF00'; 
+        //                 } else if (rssi > -115) { 
+        //                     color = '#00FF00'; 
+        //                 } else if (rssi > -120) { 
+        //                     color = '#00FFFF'; 
+        //                 }                
+
+        //                 var node = L.circleMarker([parseFloat(data[i]["latitude"]), parseFloat(data[i]["longitude"])], {
+        //                     color: color,
+        //                     radius: 5
+        //                 });
+
+        function add_new_markers(past_seconds) {
+        var url = '/past/' + past_seconds;
+        $.getJSON(url,
+            function(data, textStatus, jqXHR) {
+                if (jqXHR.status !== 204) {
+                    for (var i = 0; i < data.length; i++) {
+                        var rssi = parseInt(data[i]["rssi"]);
+                        var color = '#0000FF'; // Default blue
+                        if (rssi > -100) {
+                            color = '#FF0000'; // Red for RSSI > -100
+                        } else if (rssi > -105) { 
+                            color = '#FFFF00'; // Yellow for -100 >= RSSI > -105
+                        } else if (rssi > -110) { 
+                            color = '#00FF00'; // Green for -105 >= RSSI > -110
+                        } else { 
+                            color = '#0000FF'; // Blue for RSSI <= -110
+                        }                
+
+                        var node = L.circleMarker([parseFloat(data[i]["latitude"]), parseFloat(data[i]["longitude"])], {
+                            color: color,
+                            radius: 5
+                        });
+
+                        var popupContent = '<b>Node:</b> ' + data[i]["device_id"] + '<br />' +
+                            '<b>Gateway ID:</b> ' + data[i]["gateway_id"] + '<br />' +
+                            '<b>Lat/Lon:</b> ' + data[i]["latitude"] + ', ' + data[i]["longitude"] + '<br />' +
+                            '<b>Temperature:</b> ' + data[i]["temperature"] + '°C<br />' +
+                            '<b>RSSI:</b> ' + data[i]["rssi"] + ' dBm<br />' +
+                            '<b>SNR:</b> ' + data[i]["snr"] + ' dB<br />' +
+                            '<b>Date:</b> ' + formatDate(data[i]["datetime"]) + '<br />' +
+                            '<b>Time:</b> ' + formatTime(data[i]["datetime"]);
+
+                        node.bindPopup(popupContent);
+                        markers[data[i]["device_id"]].addLayer(node);
+                    }
+                }
+            }
+        );
+    }
+    
+    // Fonction pour formater la date à partir d'un objet datetime
+    function formatDate(datetime) {
+      var date = new Date(datetime);
+      return date.toLocaleDateString();
+    }
+
+    // Fonction pour formater l'heure à partir d'un objet datetime
+    function formatTime(datetime) {
+      var time = new Date(datetime);
+      return time.toLocaleTimeString();
+    }
+
+    // Écouteur d'événement pour détecter les changements dans la sélection du menu déroulant
+    $('select').change(function(){
+      for (var key in markers) {
+        map.removeLayer(markers[key]);
+        markers[key] = new L.FeatureGroup();
+        map.addLayer(markers[key]);
+      }
+      if ($(this).val() === "all") {
+        add_new_markers(0);
+      } else if ($(this).val() === "7day") {
+        add_new_markers(604800);
+      } else if ($(this).val() === "1day") {
+        add_new_markers(86400);
+      } else if ($(this).val() === "6hour") {
+        add_new_markers(21600);
+      } else if ($(this).val() === "1hour") {
+        add_new_markers(3600);
+      } else if ($(this).val() === "30min") {
+        add_new_markers(1800);
+      }
+    });
+
+    // Fonction pour répéter l'ajout de nouveaux marqueurs à intervalles réguliers
+    function repeat_add_new_markers(past_seconds) {
+      setInterval(function () {
+        add_new_markers(past_seconds)
+      }, Number(past_seconds) * 1000);
+    }
+
+    // Ajout initial des marqueurs avec rafraîchissement toutes les 3 secondes après le chargement de la page
+    add_new_markers('0');
+    window.onload = function() {
+    setInterval(function() {
+        repeat_add_new_markers(3); // 3 secondes
+    }, 3000); // 3000 millisecondes = 3 secondes
+};
+
+    L.control.bigImage({position: 'topright'}).addTo(map);
+
+    </script>
+  </body>
+</html>

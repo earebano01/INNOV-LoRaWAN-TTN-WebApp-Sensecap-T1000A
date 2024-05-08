@@ -1,0 +1,29 @@
+version: "3.0"
+
+services:
+
+  flask_app:
+    container_name: flask_app
+    restart: always
+    build: ./flask_app
+    volumes:
+      - ttn_tracker_var:/var/ttn_tracker
+    ports:
+      - "8000:8000"
+    command: gunicorn -w 1 --worker-class gthread --bind :8000 app:app
+
+
+  nginx:
+    container_name: nginx
+    restart: always
+    build: ./nginx
+    volumes:
+      - ttn_tracker_var:/var/ttn_tracker
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - flask_app
+
+volumes:
+  ttn_tracker_var:
