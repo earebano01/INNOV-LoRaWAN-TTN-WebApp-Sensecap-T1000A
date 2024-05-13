@@ -433,7 +433,10 @@
                         var popupContent = '<b>Node:</b> ' + data[i]["device_id"] + '<br />' +
                             '<b>Gateway ID:</b> ' + data[i]["gateway_id"] + '<br />' +
                             '<b>Lat/Lon:</b> ' + data[i]["latitude"] + ', ' + data[i]["longitude"] + '<br />' +
-                            '<b>Temperature:</b> ' + data[i]["temperature"] + '°C<br />' +
+                            '<b>Temperature:</b> ' + data[i]["temperature"] + ' °C<br />' +
+                            '<b>Humidity:</b> ' + data[i]["humidity"] + ' %<br />' +
+                            '<b>Pressure:</b> ' + data[i]["pressure"] + ' hPa<br />' +
+                            '<b>Altitude:</b> ' + data[i]["altitude"] + ' m<br />' +
                             '<b>RSSI:</b> ' + data[i]["rssi"] + ' dBm<br />' +
                             '<b>SNR:</b> ' + data[i]["snr"] + ' dB<br />' +
                             '<b>Date:</b> ' + formatDate(data[i]["datetime"]) + '<br />' +

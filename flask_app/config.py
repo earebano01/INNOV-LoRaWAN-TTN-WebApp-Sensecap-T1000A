@@ -11,7 +11,9 @@ application = "sensecap-lora-tracker" # Application utilisée
 app_key = "NNSXS.TGFGSOEXIKJROJXVOWTDUUOVWQH76LKAKOPLICI.7VSE4Z6NTIHL5WQBASAB7MX7COYW6CNL66NCVRTH5674DR4ZIKWQ" # Clé d'application
 
 devices = [ # Liste des appareils
-    "eui-2cf7f1c054600134"
+    "eui-2cf7f1c054600134",
+    "eui-2cf7f1c0546005ed",
+    "eui-a8610a34363a9216"
 ]
 
 gateway_locations = [ # Emplacements des passerelles
@@ -20,7 +22,6 @@ gateway_locations = [ # Emplacements des passerelles
 ]
 
 bing_api_key = 'AvYvx0oLrNB_CUoKLJibjitGAD7bB4o8i1bJMsPJodKBW2FftQUNSjB-Kfp9aQ8y' # Clé API Bing Maps
-
 
 def config_app(app):
     # Configuration de l'application Flask pour utiliser la base de données SQLite

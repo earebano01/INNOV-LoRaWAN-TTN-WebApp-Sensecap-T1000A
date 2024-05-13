@@ -140,7 +140,7 @@ class LastAcquisition(db.Model):
     device_id = db.Column(db.String(250))
     latitude = db.Column(db.String(250))
     longitude = db.Column(db.String(250))
-    temperature = db.Column(db.Float)     
+    temperature = db.Column(db.Float)    
     rssi = db.Column(db.Integer)       
     snr = db.Column(db.Integer)        
 
@@ -181,7 +181,8 @@ def main_page():
 # Route pour récupérer les données passées
 @app.route('/past/<seconds>')
 def get_past_data(seconds):
-    if seconds_from_last() > 10:
+    seconds_since_last = seconds_from_last()
+    if seconds_since_last is not None and seconds_since_last > 10:
         get_new_data()
 
     if seconds == '0':
