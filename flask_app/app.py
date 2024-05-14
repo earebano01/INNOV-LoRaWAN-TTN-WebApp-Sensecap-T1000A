@@ -28,42 +28,6 @@ def schedule_get_new_data():
 scheduler = BackgroundScheduler()
 job = scheduler.add_job(schedule_get_new_data, 'interval', days=1)
 scheduler.start()
-
-# Définition de la classe de modèle de données pour les localisations
-# class Location(db.Model):
-#     __tablename__ = "location"
-
-#     id = db.Column(db.Integer, primary_key=True)
-#     added_at = db.Column(db.DateTime, default=datetime.datetime.now)
-#     gateway_id = db.Column(db.String(250))  
-#     device_id = db.Column(db.String(250))
-#     raw = db.Column(db.Text)
-#     datetime = db.Column(db.String(250))
-#     datetime_obj = db.Column(db.DateTime)
-#     latitude = db.Column(db.String(250))
-#     longitude = db.Column(db.String(250))
-#     temperature = db.Column(db.Float)  
-#     humidity = db.Column(db.Float)     
-#     rssi = db.Column(db.Integer)       
-#     snr = db.Column(db.Integer)        
-
-#     def __repr__(self):
-#         return '<ID %r>' % self.id
-
-#     @property
-#     def serialize(self):
-#         """Return object data in easily serializeable format"""
-#         return {
-#             'gateway_id': self.gateway_id,    
-#             'device_id': self.device_id,
-#             'datetime': self.datetime,
-#             'latitude': self.latitude,
-#             'longitude': self.longitude,
-#             'temperature': self.temperature,  
-#             'humidity': self.humidity,        
-#             'rssi': self.rssi,                
-#             'snr': self.snr                
-#         }
     
 class Location(db.Model):
     __tablename__ = "location"
@@ -78,6 +42,9 @@ class Location(db.Model):
     latitude = db.Column(db.String(250))
     longitude = db.Column(db.String(250))
     temperature = db.Column(db.Float)    
+    humidity = db.Column(db.Float)    
+    pressure = db.Column(db.Float)    
+    altitude = db.Column(db.Float)    
     rssi = db.Column(db.Integer)       
     snr = db.Column(db.Integer)        
 
@@ -94,42 +61,12 @@ class Location(db.Model):
             'latitude': self.latitude,
             'longitude': self.longitude,
             'temperature': self.temperature,       
+            'humidity': self.humidity or 0,     
+            'pressure': self.pressure or 0,     
+            'altitude': self.altitude or 0,     
             'rssi': self.rssi,                
             'snr': self.snr                
         }
-
-# Définition de la classe de modèle de données pour la dernière acquisition
-# class LastAcquisition(db.Model):
-#     __tablename__ = "last_data"
-
-#     id = db.Column(db.Integer, primary_key=True)
-#     last_datetime = db.Column(db.DateTime)
-#     gateway_id = db.Column(db.String(250))  
-#     device_id = db.Column(db.String(250))
-#     latitude = db.Column(db.String(250))
-#     longitude = db.Column(db.String(250))
-#     temperature = db.Column(db.Float)  
-#     humidity = db.Column(db.Float)     
-#     rssi = db.Column(db.Integer)       
-#     snr = db.Column(db.Integer)        
-
-#     def __repr__(self):
-#         return '<ID %r>' % self.id
-
-#     @property
-#     def serialize(self):
-#         """Return object data in easily serializeable format"""
-#         return {
-#             'gateway_id': self.gateway_id,     
-#             'device_id': self.device_id,
-#             'datetime': self.last_datetime,
-#             'latitude': self.latitude,
-#             'longitude': self.longitude,
-#             'temperature': self.temperature,  
-#             'humidity': self.humidity,        
-#             'rssi': self.rssi,                
-#             'snr': self.snr                  
-#         }
     
 class LastAcquisition(db.Model):
     __tablename__ = "last_data"
@@ -141,6 +78,9 @@ class LastAcquisition(db.Model):
     latitude = db.Column(db.String(250))
     longitude = db.Column(db.String(250))
     temperature = db.Column(db.Float)    
+    humidity = db.Column(db.Float)    
+    pressure = db.Column(db.Float)    
+    altitude = db.Column(db.Float)    
     rssi = db.Column(db.Integer)       
     snr = db.Column(db.Integer)        
 
@@ -156,7 +96,10 @@ class LastAcquisition(db.Model):
             'datetime': self.last_datetime,
             'latitude': self.latitude,
             'longitude': self.longitude,
-            'temperature': self.temperature,        
+            'temperature': self.temperature,
+            'humidity': self.humidity or 0,     
+            'pressure': self.pressure or 0,     
+            'altitude': self.altitude or 0,       
             'rssi': self.rssi,                
             'snr': self.snr                  
         }
@@ -232,6 +175,12 @@ def get_new_data():
                     if "Latitude" in message:
                         lat = message["Latitude"]
 
+                lat = decoded_payload.get("latitude", "")
+                lon = decoded_payload.get("longitude", "")
+                temp = decoded_payload.get("temperature", "")
+                hum = decoded_payload.get("humidity", "")
+                psr = decoded_payload.get("pressure", "")
+                alt = decoded_payload.get("altitude", "")
                 rssi = rx_metadata.get("rssi", "")  
                 snr = rx_metadata.get("snr", "")    
                 device = result.get("end_device_ids", {}).get("device_id", "")
@@ -250,6 +199,9 @@ def get_new_data():
                         latitude=lat,
                         longitude=lon,
                         temperature=float(temp) if temp else None,
+                        humidity=float(hum) if hum else None,
+                        pressure=float(psr) if psr else None,
+                        altitude=float(alt) if alt else None,
                         rssi=float(rssi) if rssi else None,
                         snr=float(snr) if snr else None)
                     db.session.add(new_location)

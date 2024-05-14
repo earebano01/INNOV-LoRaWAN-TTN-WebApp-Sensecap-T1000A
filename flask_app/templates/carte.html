@@ -177,8 +177,8 @@
 
       // Ajout de marqueurs pour chaque passerelle avec un cercle autour
       {% for each_gateway in gateway_locations %}
-      var gateway = L.marker([{{each_gateway[1]}}, {{each_gateway[2]}}, {{each_gateway[3]}}]).bindPopup('Gateway: {{each_gateway[0]}}<br />Lat/Lon: {{each_gateway[1]}}, {{each_gateway[2]}}').addTo(map);
-      var gatewayCircle = L.circle([{{each_gateway[1]}}, {{each_gateway[2]}}, {{each_gateway[3]}}], {
+      var gateway = L.marker([{{each_gateway[1]}}, {{each_gateway[2]}}]).bindPopup('Gateway: {{each_gateway[0]}}<br />Lat/Lon: {{each_gateway[1]}}, {{each_gateway[2]}}').addTo(map);
+      var gatewayCircle = L.circle([{{each_gateway[1]}}, {{each_gateway[2]}}], {
           color: 'blue',
           fillColor: 'blue',
           fillOpacity: 0.1,
