@@ -407,6 +407,7 @@
         //                     radius: 5
         //                 });
 
+        // working code
         function add_new_markers(past_seconds) {
         var url = '/past/' + past_seconds;
         $.getJSON(url,
@@ -449,6 +450,7 @@
             }
         );
     }
+
     
     // Fonction pour formater la date à partir d'un objet datetime
     function formatDate(datetime) {
