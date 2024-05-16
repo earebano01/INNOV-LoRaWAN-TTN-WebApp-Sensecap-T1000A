@@ -428,6 +428,26 @@ def main_page():
                            start_lon=start_lon)
 
 # Route for retrieving past data
+# @app.route('/past/<seconds>')
+# def get_past_data(seconds):
+#     seconds_since_last = seconds_from_last()
+#     if seconds_since_last is not None and seconds_since_last > 10:
+#         get_new_data()
+
+#     try:
+#         seconds = int(seconds)
+#     except ValueError:
+#         return jsonify({"error": "Invalid time format"}), 400
+
+#     if seconds == 0:
+#         markers = Location.query.all()
+#     else:
+#         past_dt_object = datetime.datetime.now() - datetime.timedelta(seconds=seconds)
+#         markers = Location.query.filter(Location.datetime > past_dt_object).all()
+
+        
+#     return jsonify([i.serialize for i in markers])
+
 @app.route('/past/<seconds>')
 def get_past_data(seconds):
     seconds_since_last = seconds_from_last()
@@ -443,10 +463,10 @@ def get_past_data(seconds):
         markers = Location.query.all()
     else:
         past_dt_object = datetime.datetime.now() - datetime.timedelta(seconds=seconds)
-        markers = Location.query.filter(Location.datetime > past_dt_object).all()
+        markers = Location.query.filter(Location.datetime_obj > past_dt_object).all()  # Corrected filter to use datetime_obj
 
-        
     return jsonify([i.serialize for i in markers])
+
 
 # Function to retrieve new data
 def get_new_data():
