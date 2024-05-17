@@ -13,12 +13,13 @@ app_key = "NNSXS.TGFGSOEXIKJROJXVOWTDUUOVWQH76LKAKOPLICI.7VSE4Z6NTIHL5WQBASAB7MX
 devices = [ # Liste des appareils
     "eui-2cf7f1c054600134",
     "eui-2cf7f1c0546005ed",
-    "eui-a8610a34363a9216"
+    "eui-a8610a34363a9216",
+    "eui-2cf7f1c0541003c3"
 ]
 
 gateway_locations = [ # Emplacements des passerelles
     ('ccnb-ido-gw', 47.6211945, -65.67475),
-    ('KonaGWInnov', 47.6516938, -65.67487)
+    ('eui-647fdafffe01a2dc-3', 47.6516938, -65.67487)
 ]
 
 bing_api_key = 'AvYvx0oLrNB_CUoKLJibjitGAD7bB4o8i1bJMsPJodKBW2FftQUNSjB-Kfp9aQ8y' # Clé API Bing Maps

@@ -445,7 +445,6 @@ def main_page():
 #         past_dt_object = datetime.datetime.now() - datetime.timedelta(seconds=seconds)
 #         markers = Location.query.filter(Location.datetime > past_dt_object).all()
 
-        
 #     return jsonify([i.serialize for i in markers])
 
 @app.route('/past/<seconds>')

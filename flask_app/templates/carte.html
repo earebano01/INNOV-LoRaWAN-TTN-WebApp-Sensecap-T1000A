@@ -131,8 +131,6 @@
           }
       }
 
-      // map = L.map('mapid').setView([51.505, -0.09], 13);
-
       // Gestion des événements de déplacement et de zoom de la carte
       map.on('dragend', boundsChanged);
       map.on('zoomend', boundsChanged);
@@ -269,62 +267,6 @@
       // Call addHeatmapLayer function after fetching data
       addHeatmapLayer();
 
-        // Définir le contenu du titre de la légende
-        // var legendContent = `
-        //     <table>
-        //       <tbody>
-        //         <tr>
-        //           <th style="text-align: center" class="">Colour</th>
-        //           <th>&nbsp;</th>
-        //           <th colspan="2" style="text-align: center">Signal</th>
-        //         </tr>
-        //         <tr>
-        //           <td bgcolor="#FF0000"></td>
-        //           <td rowspan="3" style="vertical-align: top;">
-        //             <span style="writing-mode: vertical-lr;
-        //                         -ms-writing-mode: tb-rl;
-        //                         transform: rotate(180deg);">
-        //               <small>strong→</small>
-        //             </span>
-        //           </td>
-        //           <th>&nbsp;</th>
-        //           <td>&gt;&nbsp;-100&nbsp;dBm</td>
-        //         </tr>
-        //         <tr>
-        //           <td bgcolor="#FF7F00"></td>
-        //           <th>&nbsp;</th>
-        //           <td>-100&nbsp;-&nbsp;-105</td>
-        //         </tr>
-        //         <tr>
-        //           <td bgcolor="#FFFF00"></td>
-        //           <th>&nbsp;</th>
-        //           <td>-105&nbsp;-&nbsp;-110</td>
-        //         </tr>
-        //         <tr>
-        //           <td bgcolor="#00FF00"></td>
-        //           <td rowspan="3" style="vertical-align: bottom;">
-        //             <span style="writing-mode: vertical-lr;
-        //                         -ms-writing-mode: tb-rl;
-        //                         transform: rotate(180deg);" align="left" valign="bottom">
-        //               <small>←weak</small>
-        //             </span>
-        //           </td>
-        //           <th>&nbsp;</th>
-        //           <td>-110&nbsp;-&nbsp;-115</td>
-        //         </tr>
-        //         <tr>
-        //           <td bgcolor="#00FFFF"></td>
-        //           <th>&nbsp;</th>
-        //           <td>-115&nbsp;-&nbsp;-120</td>
-        //         </tr>
-        //         <tr>
-        //           <td bgcolor="#0000FF"></td>
-        //           <th>&nbsp;</th>
-        //           <td>&lt;&nbsp;-120&nbsp;dBm</td>
-        //         </tr>
-        //       </tbody>
-        //     </table>`;
-
         var legendContent = `
             <table>
                 <tbody>
@@ -380,34 +322,6 @@
         };
         legend_devices.addTo(map);
 
-        // Fonction pour ajouter de nouveaux marqueurs sur la carte en fonction du nombre de secondes écoulées
-        // function add_new_markers(past_seconds) {
-        // var url = '/past/' + past_seconds;
-        // $.getJSON(url,
-            
-        //     function(data, textStatus, jqXHR) {
-        //         if (jqXHR.status !== 204) {
-        //             for (var i = 0; i < data.length; i++) {
-        //                 var rssi = parseInt(data[i]["rssi"]);
-        //                 var color = '#0000FF'; 
-        //                 if (rssi > -100) {
-        //                     color = '#FF0000';
-        //                 } else if (rssi > -105) { 
-        //                     color = '#FF7F00'; 
-        //                 } else if (rssi > -110) { 
-        //                     color = '#FFFF00'; 
-        //                 } else if (rssi > -115) { 
-        //                     color = '#00FF00'; 
-        //                 } else if (rssi > -120) { 
-        //                     color = '#00FFFF'; 
-        //                 }                
-
-        //                 var node = L.circleMarker([parseFloat(data[i]["latitude"]), parseFloat(data[i]["longitude"])], {
-        //                     color: color,
-        //                     radius: 5
-        //                 });
-
-        // working code
         function add_new_markers(past_seconds) {
         var url = '/past/' + past_seconds;
         $.getJSON(url,
