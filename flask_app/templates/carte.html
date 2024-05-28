@@ -11,7 +11,6 @@
     <link rel="stylesheet" href="{{url_for('static', filename='fontawesome/css/all.css')}}" />
     <link rel="stylesheet" href="{{url_for('static', filename='leaflet-measure/leaflet-measure.css')}}" />
     <link rel="stylesheet" href="{{url_for('static', filename='leaflet-locatecontrol/L.Control.Locate.mapbox.min.css')}}" />
-    <link rel="stylesheet" href="{{url_for('static', filename='leaflet.bigImager/dist/Leaflet.BigImage.min.css')}}" />
     
     <!-- Chargement des scripts -->
     <script src="{{url_for('static', filename='jquery-3.3.1.min.js')}}"></script>
@@ -22,7 +21,6 @@
     <script src="{{url_for('static', filename='leaflet-bing-layer.min.js')}}"></script>
     <script src="{{url_for('static', filename='esri-leaflet.js')}}"></script>
     <script src="{{url_for('static', filename='heatmap.js-2.0.5/plugins/leaflet-heatmap/leaflet-heat.js')}}"></script>
-    <script src="{{url_for('static', filename='leaflet.bigImager/dist/Leaflet.BigImage.min.js')}}"></script>
     
     <style>
       .legend-container {
@@ -73,6 +71,32 @@
 
     <!-- Script JavaScript pour configurer la carte et gérer les interactions -->
     <script>
+      // Fonction pour ajouter un calque de heatmap
+      // Define heat globally
+      var heat;
+
+      // Function to add a heatmap layer
+      function addHeatmapLayer() {
+          fetch('/heatmap_data')
+              .then(response => response.json())
+              .then(data => {
+                  var gradient = {
+                      0: '#0000FF',
+                      0.25: '#00FF00',
+                      0.5: '#FFFF00',
+                      0.75: '#FFFF00',
+                      1: '#FF0000'
+                  };
+                  heat = L.heatLayer(data, {
+                      radius: 80,
+                      minOpacity: 0.4,
+                      gradient: gradient
+                  });
+                  heat.addTo(map); // Add the heatmap layer directly to the map object
+              });
+      }
+
+      // addHeatmapLayer();
 
       // Définition des différents fonds de carte
       var osm_Link = '<a href="http://openstreetmap.org">OpenStreetMap</a>',
@@ -97,7 +121,8 @@
           esri_Map = L.esri.basemapLayer("Topographic"),
           otm_Map = L.tileLayer(otm_Url, {attribution: otm_Attrib}),
           google_Map = L.tileLayer(google_Url, {attribution: google_Attrib}),
-          heat_Map = L.tileLayer(heatmap_url, {attribution: heatmap_Attrib}),
+          google_heat = L.tileLayer(google_Url, {attribution: google_Attrib}),
+          // heat_Map = L.tileLayer(heatmap_url, {attribution: heatmap_Attrib}),
 
       // Ajout des couches de fond de carte à une liste
       {%- if bing_api_key %},
@@ -145,11 +170,13 @@
         primaryLengthUnit: 'miles',
         secondaryLengthUnit: 'kilometers'
       });
+      
       measureControl.addTo(map);
-
       L.control.locate().addTo(map);
-
       L.edgeScaleBar().addTo(map);
+
+      // Create heatmap layer group
+      var heatMapLayer = L.layerGroup();
 
       // Définition des différentes couches de fond de carte
       var baseLayers = {
@@ -157,12 +184,14 @@
           "OpenStreetMap": osm_Map,
           "OpenTopoMap": otm_Map,
           "Google": google_Map,
-          "Heatmap": heat_Map,
-        {%- if bing_api_key %}
+          // "Heatmap": heat_Map,
+          "Heatmap": google_heat,
+          // "Heatmap": google_Map,
+      {% if bing_api_key %}
           "Bing (Dark)": bing_dark,
           "Bing Satellite": bing_sat,
           "Bing Satellite (w Labels)": bing_sat_labels
-        {% endif %}
+      {% endif %}
       };
 
       // Ajout d'un contrôle pour basculer entre les couches de fond de carte
@@ -180,7 +209,7 @@
           color: 'blue',
           fillColor: 'blue',
           fillOpacity: 0.1,
-          radius: 15000  
+          radius: 39000  
       }).addTo(map);
       {% endfor %}
 
@@ -234,84 +263,70 @@
         </div>`;
         return div;
       };
-      legend_devices.addTo(map);
+      legend_devices.addTo(map);      
+
+      // Function to remove the heatmap layer from the map
+      function removeHeatmapLayer() {
+          // Remove the heatmap layer from the map if it exists
+          if (map.hasLayer(heat)) {
+              map.removeLayer(heat);
+          }
+      }
 
       // Ajouter un écouteur pour contrôler les calques afin de détecter lorsque "Heatmap" est sélectionné.
-      map.on('overlayadd', function(eventLayer){
+      map.on('baselayerchange', function(eventLayer) {
           if (eventLayer.name === 'Heatmap') {
               addHeatmapLayer();
+          } else {
+              // If a different base layer is selected, remove the heatmap layer
+              removeHeatmapLayer();
           }
       });
 
-      // Fonction pour ajouter un calque de heatmap
-      function addHeatmapLayer() {
-          fetch('/heatmap_data') // Récupérer les données de heatmap à partir de la route Flask
-              .then(response => response.json())
-              .then(data => {
-                  var gradient = {
-                    0: '#0000FF',    // Blue for RSSI <= -110
-                 0.25: '#00FF00',    // Green for -110 < RSSI <= -105
-                  0.5: '#FFFF00',    // Yellow for -105 < RSSI <= -100
-                 0.75: '#FFFF00',    // Yellow for -100 < RSSI <= -95
-                    1: '#FF0000'     // Red for RSSI > -95
-                  };
-
-                  var heat = L.heatLayer(data, {
-                      radius: 80,
-                      minOpacity: 0.4, // Ajuster l'opacité minimale
-                      gradient: gradient // Utiliser les couleurs de gradient définies
-                  }).addTo(map); // Ajouter le calque de heatmap à la carte
-              });
-      }
-      
-      // Call addHeatmapLayer function after fetching data
-      addHeatmapLayer();
-
-        var legendContent = `
-            <table>
-                <tbody>
-                    <tr>
-                        <th style="text-align: center" class="">Colour</th>
-                        <th>&nbsp;</th>
-                        <th colspan="2" style="text-align: center">Signal</th>
-                    </tr>
-                    <tr>
-                        <td bgcolor="#FF6347"></td>
-                        <td rowspan="2" style="vertical-align: top;">
-                            <span style="writing-mode: vertical-lr;
-                                        -ms-writing-mode: tb-rl;
-                                        transform: rotate(180deg);">
-                                <small>strong→</small>
-                            </span>
-                        </td>
-                        <th>&nbsp;</th>
-                        <td>&gt;&nbsp;-100&nbsp;dBm</td>
-                    </tr>
-                    <tr>
-                        <td bgcolor="#FFFF00"></td>
-                        <th>&nbsp;</th>
-                        <td>-100&nbsp;à&nbsp;-105</td>
-                    </tr>
-                    <tr>
-                        <td bgcolor="#32CD32"></td>
-                        <td rowspan="2" style="vertical-align: top;">
-                            <span style="writing-mode: vertical-lr;
-                                        -ms-writing-mode: tb-rl;
-                                        transform: rotate(180deg);">
-                                <small>←weak</small>
-                            </span>
-                        </td>
-                        <th>&nbsp;</th>
-                        <td>-105&nbsp;à&nbsp;-110</td>
-                    </tr>
-                    <tr>
-                        <td bgcolor="#0000FF"></td>
-                        <th>&nbsp;</th>
-                        <td>&lt;&nbsp;-110&nbsp;dBm</td>                        
-                    </tr>
-                </tbody>
-            </table>`;
-
+      var legendContent = `
+          <table>
+              <tbody>
+                  <tr>
+                      <th style="text-align: center" class="">Colour</th>
+                      <th>&nbsp;</th>
+                      <th colspan="2" style="text-align: center">Signal</th>
+                  </tr>
+                  <tr>
+                      <td bgcolor="#FF6347"></td>
+                      <td rowspan="2" style="vertical-align: top;">
+                          <span style="writing-mode: vertical-lr;
+                                      -ms-writing-mode: tb-rl;
+                                      transform: rotate(180deg);">
+                              <small>strong→</small>
+                          </span>
+                      </td>
+                      <th>&nbsp;</th>
+                      <td>&gt;&nbsp;-100&nbsp;dBm</td>
+                  </tr>
+                  <tr>
+                      <td bgcolor="#FFFF00"></td>
+                      <th>&nbsp;</th>
+                      <td>-100&nbsp;à&nbsp;-105</td>
+                  </tr>
+                  <tr>
+                      <td bgcolor="#32CD32"></td>
+                      <td rowspan="2" style="vertical-align: top;">
+                          <span style="writing-mode: vertical-lr;
+                                      -ms-writing-mode: tb-rl;
+                                      transform: rotate(180deg);">
+                              <small>←weak</small>
+                          </span>
+                      </td>
+                      <th>&nbsp;</th>
+                      <td>-105&nbsp;à&nbsp;-110</td>
+                  </tr>
+                  <tr>
+                      <td bgcolor="#0000FF"></td>
+                      <th>&nbsp;</th>
+                      <td>&lt;&nbsp;-110&nbsp;dBm</td>                        
+                  </tr>
+              </tbody>
+          </table>`;
 
         // Contrôle pour la légende des appareils affichés sur la carte
         var legend_devices = L.control({position: 'bottomleft'});
@@ -322,6 +337,7 @@
         };
         legend_devices.addTo(map);
 
+        // Fonction pour ajouter de nouveaux marqueurs sur la carte en fonction du nombre de secondes écoulées
         function add_new_markers(past_seconds) {
         var url = '/past/' + past_seconds;
         $.getJSON(url,
@@ -364,7 +380,6 @@
             }
         );
     }
-
     
     // Fonction pour formater la date à partir d'un objet datetime
     function formatDate(datetime) {
@@ -377,6 +392,7 @@
       var time = new Date(datetime);
       return time.toLocaleTimeString();
     }
+
 
     // Écouteur d'événement pour détecter les changements dans la sélection du menu déroulant
     $('select').change(function(){
@@ -415,7 +431,7 @@
     }, 3000); // 3000 millisecondes = 3 secondes
 };
 
-    L.control.bigImage({position: 'topright'}).addTo(map);
+    // L.control.bigImage({position: 'topright'}).addTo(map);
 
     </script>
   </body>

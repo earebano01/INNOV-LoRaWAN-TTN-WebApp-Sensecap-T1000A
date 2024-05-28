@@ -415,6 +415,7 @@ if not os.path.exists(path_db):
     db.create_all()
 
 # Route for the main page displaying the map
+# @app.route('/test_carte')
 @app.route('/carte')
 def main_page():
     get_new_data()
@@ -427,26 +428,11 @@ def main_page():
                            start_lat=start_lat,
                            start_lon=start_lon)
 
+# @app.route('/carte')
+# def maintenance_page():
+#     return render_template('maintenance.html')
+
 # Route for retrieving past data
-# @app.route('/past/<seconds>')
-# def get_past_data(seconds):
-#     seconds_since_last = seconds_from_last()
-#     if seconds_since_last is not None and seconds_since_last > 10:
-#         get_new_data()
-
-#     try:
-#         seconds = int(seconds)
-#     except ValueError:
-#         return jsonify({"error": "Invalid time format"}), 400
-
-#     if seconds == 0:
-#         markers = Location.query.all()
-#     else:
-#         past_dt_object = datetime.datetime.now() - datetime.timedelta(seconds=seconds)
-#         markers = Location.query.filter(Location.datetime > past_dt_object).all()
-
-#     return jsonify([i.serialize for i in markers])
-
 @app.route('/past/<seconds>')
 def get_past_data(seconds):
     seconds_since_last = seconds_from_last()
@@ -462,7 +448,7 @@ def get_past_data(seconds):
         markers = Location.query.all()
     else:
         past_dt_object = datetime.datetime.now() - datetime.timedelta(seconds=seconds)
-        markers = Location.query.filter(Location.datetime_obj > past_dt_object).all()  # Corrected filter to use datetime_obj
+        markers = Location.query.filter(Location.datetime > past_dt_object).all()
 
     return jsonify([i.serialize for i in markers])
 
